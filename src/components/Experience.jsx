@@ -1,4 +1,4 @@
-import { Environment, OrbitControls } from "@react-three/drei";
+import { ContactShadows, Environment, OrbitControls } from "@react-three/drei";
 import { AnimatedWoman } from "./AnimatedWoman";
 
 export const Experience = () => {
@@ -6,8 +6,10 @@ export const Experience = () => {
 		<>
 			<Environment preset="sunset" />
 			<ambientLight intensity={0.3} />
+			<ContactShadows blur={2} />
 			<OrbitControls />
 			<AnimatedWoman />
+			<AnimatedWoman position-x={1} hairColor="red" topColor="blue" />
 		</>
 	);
 };
