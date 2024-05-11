@@ -1,39 +1,28 @@
-import {
-	ContactShadows,
-	Environment,
-	Grid,
-	OrbitControls,
-	useCursor,
-} from "@react-three/drei";
-import { AnimatedWoman } from "./AnimatedWoman";
-import { useAtom } from "jotai";
-import { charactersAtom, mapAtom, socket, userAtom } from "./SocketManager";
-import { useEffect, useState } from "react";
-import * as THREE from "three";
-import { Item } from "./Items";
-import { useThree } from "@react-three/fiber";
-import { useGrid } from "../hooks/useGrid";
+import { Environment, Grid, OrbitControls, useCursor } from "@react-three/drei";
 
+import { useThree } from "@react-three/fiber";
+import { useAtom } from "jotai";
+import { useEffect, useRef, useState } from "react";
+import { useGrid } from "../hooks/useGrid";
+import { AnimatedWoman } from "./AnimatedWoman";
+import { Item } from "./Items";
+import { charactersAtom, mapAtom, socket, userAtom } from "./SocketManager";
+import { buildModeAtom, draggedItemAtom, draggedItemRotationAtom } from "./UI";
 export const Experience = () => {
-	const [buildMode, setBuildMode] = useState(true);
+	const [buildMode, setBuildMode] = useAtom(buildModeAtom);
 	const [characters] = useAtom(charactersAtom);
-	const [onFloor, setOnFloor] = useState(false);
 	const [map] = useAtom(mapAtom);
 	const [items, setItems] = useState(map.items);
-
-	console.log(items);
+	const [onFloor, setOnFloor] = useState(false);
 	useCursor(onFloor);
 	const { vector3ToGrid, gridToVector3 } = useGrid();
 
 	const scene = useThree((state) => state.scene);
-	const user = useAtom(userAtom);
+	const [user] = useAtom(userAtom);
 
 	const onPlaneClicked = (e) => {
-		// console.log("onCharacterMove");
 		if (!buildMode) {
-			const id = user[0].toString();
-			const character = scene.getObjectByName(`character-${id}`);
-			// console.log(character);
+			const character = scene.getObjectByName(`character-${user}`);
 			if (!character) {
 				return;
 			}
@@ -48,6 +37,7 @@ export const Experience = () => {
 					setItems((prev) => {
 						const newItems = [...prev];
 						newItems[draggedItem].gridPosition = vector3ToGrid(e.point);
+						newItems[draggedItem].rotation = draggedItemRotation;
 						return newItems;
 					});
 				}
@@ -56,7 +46,10 @@ export const Experience = () => {
 		}
 	};
 
-	const [draggedItem, setDraggedItem] = useState(null);
+	const [draggedItem, setDraggedItem] = useAtom(draggedItemAtom);
+	const [draggedItemRotation, setDraggedItemRotation] = useAtom(
+		draggedItemRotationAtom
+	);
 	const [dragPosition, setDragPosition] = useState(null);
 	const [canDrop, setCanDrop] = useState(false);
 
@@ -85,7 +78,7 @@ export const Experience = () => {
 		) {
 			droppable = false;
 		}
-
+		// check if item is not colliding with other items
 		if (!item.walkable && !item.wall) {
 			items.forEach((otherItem, idx) => {
 				// ignore self
@@ -120,13 +113,31 @@ export const Experience = () => {
 
 		setCanDrop(droppable);
 	}, [dragPosition, draggedItem, items]);
+	const controls = useRef();
+	const state = useThree((state) => state);
+
+	useEffect(() => {
+		if (buildMode) {
+			setItems(map?.items || []);
+			state.camera.position.set(15, 8, 30);
+			controls.current.target.set(0, 0, 0);
+		} else {
+			socket.emit("itemsUpdate", items);
+		}
+	}, [buildMode]);
 
 	return (
 		<>
 			<Environment preset="sunset" />
 			<ambientLight intensity={0.3} />
-			{/* <ContactShadows blur={2} /> */}
-			<OrbitControls />
+			<OrbitControls
+				ref={controls}
+				// minDistance={5}
+				// maxDistance={20}
+				minPolarAngle={0}
+				maxPolarAngle={Math.PI / 2}
+				screenSpacePanning={false}
+			/>
 
 			{(buildMode ? items : map.items).map((item, idx) => (
 				<Item
@@ -135,16 +146,15 @@ export const Experience = () => {
 					onClick={() => {
 						if (buildMode) {
 							setDraggedItem((prev) => (prev === null ? idx : prev));
-							// setDraggedItemRotation(item.rotation || 0);
+							setDraggedItemRotation(item.rotation || 0);
 						}
 					}}
 					isDragging={draggedItem === idx}
 					dragPosition={dragPosition}
-					// dragRotation={draggedItemRotation}
+					dragRotation={draggedItemRotation}
 					canDrop={canDrop}
 				/>
 			))}
-
 			<mesh
 				rotation-x={-Math.PI / 2}
 				position-y={-0.002}
@@ -162,7 +172,6 @@ export const Experience = () => {
 						newPosition[1] !== dragPosition[1]
 					) {
 						setDragPosition(newPosition);
-						// socket.emit("drag", newPosition);
 					}
 				}}
 				position-x={map.size[0] / 2}
@@ -171,12 +180,6 @@ export const Experience = () => {
 				<planeGeometry args={map.size} />
 				<meshStandardMaterial color="#f0f0f0" />
 			</mesh>
-
-			{/* <mesh position={[4, 2.5, 7.5]} rotation-y={-Math.PI / 2}>
-				<boxGeometry args={[15, 5, 1]} />
-				<meshStandardMaterial color="lightblue" />
-			</mesh> */}
-
 			<Grid infiniteGrid fadeDistance={50} fadeStrength={5} />
 			{!buildMode &&
 				characters.map((character) => (
