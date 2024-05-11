@@ -11,7 +11,7 @@ import { SkeletonUtils } from "three-stdlib";
 import { userAtom } from "./SocketManager";
 import { useGrid } from "../hooks/useGrid";
 
-const MOVEMENT_SPEED = 0.032;
+const MOVEMENT_SPEED = 0.05;
 
 export function AnimatedWoman({
 	hairColor = "green",
