@@ -12,7 +12,8 @@ export const Experience = () => {
 	const [buildMode, setBuildMode] = useAtom(buildModeAtom);
 	const [characters] = useAtom(charactersAtom);
 	const [map] = useAtom(mapAtom);
-	const [items, setItems] = useState(map.items);
+	const [items, setItems] = useState([]);
+
 	const [onFloor, setOnFloor] = useState(false);
 	useCursor(onFloor);
 	const { vector3ToGrid, gridToVector3 } = useGrid();
@@ -52,6 +53,12 @@ export const Experience = () => {
 	);
 	const [dragPosition, setDragPosition] = useState(null);
 	const [canDrop, setCanDrop] = useState(false);
+
+	useEffect(() => {
+		if (map && map.items) {
+			setItems(map.items);
+		}
+	}, [map]);
 
 	useEffect(() => {
 		if (!draggedItem) {
@@ -119,12 +126,16 @@ export const Experience = () => {
 	useEffect(() => {
 		if (buildMode) {
 			setItems(map?.items || []);
-			state.camera.position.set(15, 8, 30);
+			state.camera.position.set(8, 8, 8);
 			controls.current.target.set(0, 0, 0);
 		} else {
 			socket.emit("itemsUpdate", items);
 		}
 	}, [buildMode]);
+
+	if (items.length === 0) {
+		return null;
+	}
 
 	return (
 		<>
@@ -132,8 +143,8 @@ export const Experience = () => {
 			<ambientLight intensity={0.3} />
 			<OrbitControls
 				ref={controls}
-				// minDistance={5}
-				// maxDistance={20}
+				minDistance={5}
+				maxDistance={20}
 				minPolarAngle={0}
 				maxPolarAngle={Math.PI / 2}
 				screenSpacePanning={false}
