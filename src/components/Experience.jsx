@@ -1,18 +1,36 @@
-import { Environment, Grid, OrbitControls, useCursor } from "@react-three/drei";
+import {
+	Environment,
+	Grid,
+	Html,
+	OrbitControls,
+	Text,
+	useCursor,
+} from "@react-three/drei";
 
 import { useThree } from "@react-three/fiber";
 import { useAtom } from "jotai";
+
 import { useEffect, useRef, useState } from "react";
 import { useGrid } from "../hooks/useGrid";
 import { AnimatedWoman } from "./AnimatedWoman";
 import { Item } from "./Items";
-import { charactersAtom, mapAtom, socket, userAtom } from "./SocketManager";
+import {
+	charactersAtom,
+	mapAtom,
+	nicknameAtom,
+	socket,
+	userAtom,
+} from "./SocketManager";
 import { buildModeAtom, draggedItemAtom, draggedItemRotationAtom } from "./UI";
+import { Modal } from "./Modal";
+import { Navigate, useNavigate } from "react-router-dom";
 export const Experience = () => {
 	const [buildMode, setBuildMode] = useAtom(buildModeAtom);
 	const [characters] = useAtom(charactersAtom);
 	const [map] = useAtom(mapAtom);
 	const [items, setItems] = useState([]);
+	// const [nickname] = useAtom(nicknameAtom);
+	const [isLoading, setIsLoading] = useState(true);
 
 	const [onFloor, setOnFloor] = useState(false);
 	useCursor(onFloor);
@@ -20,6 +38,7 @@ export const Experience = () => {
 
 	const scene = useThree((state) => state.scene);
 	const [user] = useAtom(userAtom);
+	const navigate = useNavigate();
 
 	const onPlaneClicked = (e) => {
 		if (!buildMode) {
@@ -57,6 +76,7 @@ export const Experience = () => {
 	useEffect(() => {
 		if (map && map.items) {
 			setItems(map.items);
+			setIsLoading(false);
 		}
 	}, [map]);
 
@@ -133,77 +153,78 @@ export const Experience = () => {
 		}
 	}, [buildMode]);
 
-	if (items.length === 0) {
-		return null;
-	}
-
-	return (
-		<>
-			<Environment preset="sunset" />
-			<ambientLight intensity={0.3} />
-			<OrbitControls
-				ref={controls}
-				minDistance={5}
-				maxDistance={20}
-				minPolarAngle={0}
-				maxPolarAngle={Math.PI / 2}
-				screenSpacePanning={false}
-			/>
-
-			{(buildMode ? items : map.items).map((item, idx) => (
-				<Item
-					key={`${item.name}-${idx}`}
-					item={item}
-					onClick={() => {
-						if (buildMode) {
-							setDraggedItem((prev) => (prev === null ? idx : prev));
-							setDraggedItemRotation(item.rotation || 0);
-						}
-					}}
-					isDragging={draggedItem === idx}
-					dragPosition={dragPosition}
-					dragRotation={draggedItemRotation}
-					canDrop={canDrop}
-				/>
-			))}
-			<mesh
-				rotation-x={-Math.PI / 2}
-				position-y={-0.002}
-				onClick={onPlaneClicked}
-				onPointerEnter={() => setOnFloor(true)}
-				onPointerLeave={() => setOnFloor(false)}
-				onPointerMove={(e) => {
-					if (!buildMode) {
-						return;
-					}
-					const newPosition = vector3ToGrid(e.point);
-					if (
-						!dragPosition ||
-						newPosition[0] !== dragPosition[0] ||
-						newPosition[1] !== dragPosition[1]
-					) {
-						setDragPosition(newPosition);
-					}
-				}}
-				position-x={map.size[0] / 2}
-				position-z={map.size[1] / 2}
-			>
-				<planeGeometry args={map.size} />
-				<meshStandardMaterial color="#f0f0f0" />
-			</mesh>
-			<Grid infiniteGrid fadeDistance={50} fadeStrength={5} />
-			{!buildMode &&
-				characters.map((character) => (
-					<AnimatedWoman
-						key={character.id}
-						id={character.id}
-						path={character.path}
-						position={gridToVector3(character.position)}
-						hairColor={character.hairColor}
-						topColor={character.topColor}
-						bottomColor={character.bottomColor}
+	return isLoading
+		? null
+		: items.length !== 0 && (
+				<>
+					<Environment preset="sunset" />
+					<ambientLight intensity={0.3} />
+					<OrbitControls
+						ref={controls}
+						minDistance={5}
+						maxDistance={20}
+						minPolarAngle={0}
+						maxPolarAngle={Math.PI / 2}
+						screenSpacePanning={false}
 					/>
-				))}
-		</>
-	);
+
+					{(buildMode ? items : map.items).map((item, idx) => (
+						<Item
+							key={`${item.name}-${idx}`}
+							item={item}
+							onClick={() => {
+								if (buildMode) {
+									setDraggedItem((prev) => (prev === null ? idx : prev));
+									setDraggedItemRotation(item.rotation || 0);
+								}
+							}}
+							isDragging={draggedItem === idx}
+							dragPosition={dragPosition}
+							dragRotation={draggedItemRotation}
+							canDrop={canDrop}
+						/>
+					))}
+					<mesh
+						rotation-x={-Math.PI / 2}
+						position-y={-0.002}
+						onClick={onPlaneClicked}
+						onPointerEnter={() => setOnFloor(true)}
+						onPointerLeave={() => setOnFloor(false)}
+						onPointerMove={(e) => {
+							if (!buildMode) {
+								return;
+							}
+							const newPosition = vector3ToGrid(e.point);
+							if (
+								!dragPosition ||
+								newPosition[0] !== dragPosition[0] ||
+								newPosition[1] !== dragPosition[1]
+							) {
+								setDragPosition(newPosition);
+							}
+						}}
+						position-x={map.size[0] / 2}
+						position-z={map.size[1] / 2}
+					>
+						<planeGeometry args={map.size} />
+						<meshStandardMaterial color="#f0f0f0" />
+					</mesh>
+					<Grid infiniteGrid fadeDistance={50} fadeStrength={5} />
+					{!buildMode &&
+						characters.map((character) => (
+							<>
+								<AnimatedWoman
+									key={character.id}
+									id={character.id}
+									nickname={character.nickname}
+									path={character.path}
+									position={gridToVector3(character.position)}
+									hairColor={character.hairColor}
+									topColor={character.topColor}
+									bottomColor={character.bottomColor}
+								/>
+							</>
+						))}
+				</>
+		  );
 };
