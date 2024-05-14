@@ -42,6 +42,7 @@ export const SocketManager = () => {
 			setCharacters((prev) => {
 				return prev.map((character) => {
 					if (character.id === value.id) {
+						socket.emit("moveDone", { id: character.id });
 						return value;
 					}
 					return character;
