@@ -1,18 +1,13 @@
-import { Canvas } from "@react-three/fiber";
-import { Experience } from "./components/Experience";
-import { SocketManager } from "./components/SocketManager";
-import { UI } from "./components/UI";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Home } from "./pages/home";
+import { Info } from "./pages/info/[id]";
 
 function App() {
 	return (
-		<>
-			<SocketManager />
-			<Canvas shadows camera={{ position: [8, 8, 8], fov: 30 }}>
-				<color attach="background" args={["#ececec"]} />
-				<Experience />
-			</Canvas>
-			<UI />
-		</>
+		<Routes>
+			<Route path="/info/:id" element={<Info />}></Route>
+			<Route path="/" element={<Home />}></Route>
+		</Routes>
 	);
 }
 
